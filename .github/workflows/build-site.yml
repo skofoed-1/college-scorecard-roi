@@ -1,0 +1,38 @@
+name: Rebuild site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "data/processed/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build site data + site
+        run: |
+          python scripts/build_site_data.py
+          python scripts/build_site.py
+
+      - name: Commit rebuilt site
+        run: |
+          git config user.name "Steve"
+          git config user.email "325648081+skofoed-1@users.noreply.github.com"
+          git add docs/
+          git diff --cached --quiet || git commit -m "site: rebuild from $(git rev-parse --short HEAD)"
+          git push
