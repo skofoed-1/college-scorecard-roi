@@ -3,7 +3,12 @@
 CSV. Scope: public and private nonprofit, bachelor's-predominant
 institutions (PREDDEG == 3) with non-suppressed cost, earnings, and debt
 data: the population where "4-year cost vs. 10-year earnings" is a
-coherent, apples-to-apples comparison.
+coherent, apples-to-apples comparison. Also drops institutions with
+undergrad enrollment (UGDS) under 100, since a handful of students can
+swing the average sharply at that scale; larger institutions with
+extreme-looking payback figures (e.g. Princeton, CUNY schools) are kept
+as-is; their low net price is a real effect of aid/subsidized tuition,
+not noise.
 
 ROI framing used here: a payback-period estimate (how many years of a
 graduate's post-graduation salary it would take to cover the total
@@ -22,14 +27,15 @@ OUT_CSV = ROOT / "data" / "processed" / "college_scorecard_roi.csv"
 
 COLUMNS = [
     "UNITID", "INSTNM", "STABBR", "CONTROL", "PREDDEG",
-    "COSTT4_A", "NPT4_PUB", "NPT4_PRIV",
+    "COSTT4_A", "NPT4_PUB", "NPT4_PRIV", "UGDS",
     "C150_4", "MD_EARN_WNE_P10", "GRAD_DEBT_MDN",
 ]
 
 CONTROL_LABELS = {1: "Public", 2: "Private nonprofit"}
 
+MIN_ENROLLMENT = 100
 
-NUMERIC_COLUMNS = ["COSTT4_A", "NPT4_PUB", "NPT4_PRIV", "C150_4", "MD_EARN_WNE_P10", "GRAD_DEBT_MDN"]
+NUMERIC_COLUMNS = ["COSTT4_A", "NPT4_PUB", "NPT4_PRIV", "UGDS", "C150_4", "MD_EARN_WNE_P10", "GRAD_DEBT_MDN"]
 
 
 def load_raw() -> pd.DataFrame:
@@ -46,8 +52,9 @@ def build_roi_table(df: pd.DataFrame) -> pd.DataFrame:
     df["net_price"] = df["NPT4_PUB"].fillna(df["NPT4_PRIV"])
     df["four_year_cost"] = df["net_price"] * 4
 
-    df = df.dropna(subset=["four_year_cost", "MD_EARN_WNE_P10", "GRAD_DEBT_MDN"])
+    df = df.dropna(subset=["four_year_cost", "MD_EARN_WNE_P10", "GRAD_DEBT_MDN", "UGDS"])
     df = df[(df["four_year_cost"] > 0) & (df["MD_EARN_WNE_P10"] > 0)]
+    df = df[df["UGDS"] >= MIN_ENROLLMENT]
 
     df["control_label"] = df["CONTROL"].map(CONTROL_LABELS)
     df["payback_years"] = df["four_year_cost"] / df["MD_EARN_WNE_P10"]
@@ -55,12 +62,14 @@ def build_roi_table(df: pd.DataFrame) -> pd.DataFrame:
 
     result = df[[
         "UNITID", "INSTNM", "STABBR", "control_label",
-        "net_price", "four_year_cost", "C150_4",
+        "net_price", "COSTT4_A", "four_year_cost", "UGDS", "C150_4",
         "MD_EARN_WNE_P10", "GRAD_DEBT_MDN",
         "payback_years", "debt_to_earnings",
     ]].rename(columns={
         "INSTNM": "institution",
         "STABBR": "state",
+        "COSTT4_A": "sticker_cost",
+        "UGDS": "enrollment",
         "C150_4": "completion_rate",
         "MD_EARN_WNE_P10": "median_earnings_10yr",
         "GRAD_DEBT_MDN": "median_grad_debt",
