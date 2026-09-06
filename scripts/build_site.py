@@ -164,8 +164,10 @@ def main() -> None:
     tiers = cost_tier_summary(df)
     states = state_summary(df)
 
-    scatter_html = build_scatter(df).to_html(full_html=False, include_plotlyjs="cdn", config={"displaylogo": False})
-    tier_html = build_tier_bar(tiers).to_html(full_html=False, include_plotlyjs=False, config={"displaylogo": False})
+    scatter_html = build_scatter(df).to_html(full_html=False, include_plotlyjs="cdn",
+                                              config={"displaylogo": False}, div_id="scatter-chart")
+    tier_html = build_tier_bar(tiers).to_html(full_html=False, include_plotlyjs=False,
+                                               config={"displaylogo": False}, div_id="tier-chart")
 
     rank_formatters = {"institution": str, "state": str, "payback_years": years}
     best_table = table_html(best, ["institution", "state", "payback_years"],
