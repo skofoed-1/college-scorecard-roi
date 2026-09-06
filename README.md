@@ -1,5 +1,7 @@
 # College Scorecard ROI Explorer
 
+**[View the live site](https://skofoed-1.github.io/college-scorecard-roi/)**: rankings, charts, and a state-by-state breakdown.
+
 **Question:** For a bachelor's degree, how does the total cost of attendance compare to what graduates actually earn afterward, and does that relationship vary a lot by school?
 
 ## Method
@@ -15,18 +17,28 @@ This is descriptive, not causal. It doesn't control for who chooses or gets into
 
 A handful of schools show `payback_years` under one year. Checked against enrollment and cohort-size figures, most of these aren't a data error: Princeton and several CUNY schools land here because their net price is genuinely near-zero for most students (large aid budgets, or, for CUNY, low public tuition), combined with strong post-graduation earnings: a real result, not noise. The 100-student enrollment floor above exists only to drop the few institutions small enough that a handful of students can swing the average sharply (e.g. a college with under 100 undergraduates reporting a near-zero net price); it isn't a general claim that low payback years are suspect.
 
+## Findings
+
+Splitting institutions into net-price quartiles (low to high cost) shows payback years rising steadily with cost, not staying flat: median payback is 0.93 years in the cheapest quartile, 1.29 in the second, 1.66 in the third, and 2.03 in the priciest. Debt-to-earnings doesn't follow the same clean trend, which is the point of tracking it separately from payback years: a school can recover its cost quickly while still leaving graduates comparatively debt-heavy relative to income.
+
+The worst payback years in the dataset are concentrated in a specific, explainable category: specialized arts and music conservatories (Manhattan School of Music, Berklee College of Music, the New England Conservatory, Ringling College of Art and Design, Juilliard), where net price is high relative to typical post-graduation earnings in those fields. This isn't a data artifact. It's a real, consistent pattern across a whole category of institution.
+
+Full rankings, the cost-vs-earnings scatter, and a per-state breakdown are on [the live site](https://skofoed-1.github.io/college-scorecard-roi/).
+
 ## Data
 
 U.S. Dept. of Education [College Scorecard](https://collegescorecard.ed.gov/data/), institution-level bulk file. Free, no API key, no rate limit.
 
 ```
 scripts/fetch_data.py       # downloads the current bulk CSV to data/raw/ (not committed, ~96MB)
-scripts/build_roi_table.py  # cleans it and computes payback_years / debt_to_earnings
+scripts/build_roi_table.py  # cleans it, applies the enrollment floor, computes payback_years / debt_to_earnings
+scripts/build_site_data.py  # computes rankings, state summary, and cost-tier summary
+scripts/build_site.py       # generates docs/index.html (the published site)
 data/processed/college_scorecard_roi.csv   # the resulting table, committed (small)
 ```
 
-To reproduce: `pip install -r requirements.txt`, then run both scripts in order.
+To reproduce: `pip install -r requirements.txt`, then run the scripts in order. `docs/index.html` rebuilds automatically via GitHub Actions on any push that changes `scripts/**` or `data/processed/**`.
 
 ## Status
 
-Data pipeline built, enrollment floor and sticker-cost column added, ROI table generated (1,515 institutions). Analysis/visualization (rankings, distributions, state comparisons) and a published site not yet built.
+Complete: data pipeline, enrollment floor, ROI table (1,515 institutions), analysis, published site, and CI rebuild are all in place.
