@@ -29,13 +29,13 @@ jobs:
           python scripts/build_site_data.py
           python scripts/build_site.py
 
-      - name: Build SQL database
+      - name: Build SQL database (validates queries still run)
         run: python scripts/build_sql.py
 
-      - name: Commit rebuilt artifacts
+      - name: Commit rebuilt site
         run: |
           git config user.name "Steve"
           git config user.email "325648081+skofoed-1@users.noreply.github.com"
-          git add docs/ sql/college_scorecard_roi.db
-          git diff --cached --quiet || git commit -m "rebuild: site + SQL DB from $(git rev-parse --short HEAD)"
+          git add docs/
+          git diff --cached --quiet || git commit -m "site: rebuild from $(git rev-parse --short HEAD)"
           git push
