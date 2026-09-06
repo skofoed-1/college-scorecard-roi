@@ -55,6 +55,23 @@ def cost_tier_summary(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def out_of_state_summary(df: pd.DataFrame) -> dict:
+    """Overall in-state vs. out-of-state-estimate comparison, public institutions only."""
+    public = df[df["control_label"] == "Public"]
+    return {
+        "median_in_state": public["payback_years"].median(),
+        "median_out_of_state": public["out_of_state_payback_years_est"].median(),
+        "institutions": len(public),
+    }
+
+
+def out_of_state_gap(df: pd.DataFrame, n: int = 15) -> pd.DataFrame:
+    """Public institutions with the largest in-state vs. out-of-state-estimate payback gap."""
+    public = df[df["control_label"] == "Public"].copy()
+    public["gap"] = public["out_of_state_payback_years_est"] - public["payback_years"]
+    return public.sort_values("gap", ascending=False).head(n)
+
+
 def main() -> None:
     df = load_roi()
     best, worst = top_bottom_rankings(df)
@@ -67,6 +84,10 @@ def main() -> None:
     print(state_summary(df).head(10).to_string(index=False))
     print("\nCost tier summary:")
     print(cost_tier_summary(df).to_string(index=False))
+    print("\nOut-of-state summary (public institutions):")
+    print(out_of_state_summary(df))
+    print("\nLargest in-state vs. out-of-state gap (public institutions):")
+    print(out_of_state_gap(df)[["institution", "state", "payback_years", "out_of_state_payback_years_est"]].to_string(index=False))
 
 
 if __name__ == "__main__":

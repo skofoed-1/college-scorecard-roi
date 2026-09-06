@@ -7,7 +7,7 @@
 ## Method
 
 - **Scope:** public and private nonprofit institutions where a bachelor's degree is the predominant credential (U.S. Dept. of Education's `PREDDEG == 3`), with undergrad enrollment of at least 100 students. For-profit institutions (`CONTROL == 3`) are excluded: their net-price fields (`NPT4_PROG`/`NPT4_OTHER`) don't map onto the public/private-nonprofit cost logic used here, and mixing in a third, differently-measured cost basis would break the apples-to-apples comparison this project is built around.
-- **Cost:** average net price (what students actually pay after grants/scholarships, not sticker price) times 4 years. `sticker_cost` (average annual cost of attendance before aid) is included alongside it, so the gap between list price and what students actually pay is visible per institution.
+- **Cost:** average net price (what students actually pay after grants/scholarships, not sticker price) times 4 years. `sticker_cost` (average annual cost of attendance before aid) is included alongside it, so the gap between list price and what students actually pay is visible per institution. For public institutions, this net price is **in-state only**, per the [College Scorecard glossary](https://collegescorecard.ed.gov/data/glossary/); there's no official out-of-state figure. An `out_of_state_net_price_est` column estimates it as in-state net price plus the sticker-tuition gap between residencies, which assumes grant aid doesn't vary by residency. Treat it as a reasonable approximation, not an official number; private nonprofit tuition doesn't have this problem since it doesn't vary by residency.
 - **Earnings:** median earnings of former students 10 years after enrollment, among those working and not enrolled elsewhere.
 - **Metric:** `payback_years` = four-year cost ÷ median 10-year earnings. Roughly, this is how many years of a graduate's post-grad salary it would take to cover the cost of the degree. Lower means the cost recovers faster relative to what graduates go on to earn. A companion `debt_to_earnings` ratio (median graduate debt ÷ median 10-year earnings) captures debt burden specifically, since a school can look fine on payback years while still leaving graduates with a lot of debt relative to income.
 
@@ -23,7 +23,9 @@ Splitting institutions into net-price quartiles (low to high cost) shows payback
 
 The worst payback years in the dataset are concentrated in a specific, explainable category: specialized arts and music conservatories (Manhattan School of Music, Berklee College of Music, the New England Conservatory, Ringling College of Art and Design, Juilliard), where net price is high relative to typical post-graduation earnings in those fields. This isn't a data artifact. It's a real, consistent pattern across a whole category of institution.
 
-Full rankings, the cost-vs-earnings scatter, and a per-state breakdown are on [the live site](https://skofoed-1.github.io/college-scorecard-roi/).
+Because public institutions' net price is in-state only, the payback years shown for them understate the real cost for an out-of-state student. Using the out-of-state estimate instead, median payback years across all 560 public institutions in this table rise from 1.10 to 1.96, a 78% increase. The gap is largest at flagship universities with substantial out-of-state enrollment (Michigan, several UC campuses, Montana, Maine, Oregon), where the in-state number alone would be a misleading stand-in for what most non-resident applicants would actually pay.
+
+Full rankings, the cost-vs-earnings scatter, the in-state/out-of-state comparison, and a per-state breakdown are on [the live site](https://skofoed-1.github.io/college-scorecard-roi/).
 
 ## Data
 

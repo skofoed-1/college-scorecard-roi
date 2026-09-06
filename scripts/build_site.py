@@ -9,7 +9,10 @@ frontend stack.
 import plotly.graph_objects as go
 from pathlib import Path
 
-from build_site_data import load_roi, top_bottom_rankings, state_summary, cost_tier_summary, COST_TIER_LABELS
+from build_site_data import (
+    load_roi, top_bottom_rankings, state_summary, cost_tier_summary, COST_TIER_LABELS,
+    out_of_state_summary, out_of_state_gap,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_HTML = ROOT / "docs" / "index.html"
@@ -20,6 +23,10 @@ CONTROL_COLORS = {"Public": "#2a78d6", "Private nonprofit": "#eb6834"}
 
 # Sequential blue ramp, ordinal steps (darker = higher tier), one per cost tier.
 TIER_COLORS = {"Low": "#86b6ef", "Medium-low": "#5598e7", "Medium-high": "#2a78d6", "High": "#184f95"}
+
+# One hue, two shades (light = before/in-state, dark = after/out-of-state) for the dumbbell chart.
+IN_STATE_COLOR = "#86b6ef"
+OUT_OF_STATE_COLOR = "#184f95"
 
 INK = "#0b0b0b"
 MUTED = "#898781"
@@ -78,6 +85,41 @@ def build_tier_bar(tiers) -> go.Figure:
     return fig
 
 
+def build_oos_dumbbell(gap_df) -> go.Figure:
+    ordered = gap_df.sort_values("gap")  # ascending, so the largest gap plots at the top
+    labels = ordered["institution"] + " (" + ordered["state"] + ")"
+
+    connector_x, connector_y = [], []
+    for label, row in zip(labels, ordered.itertuples()):
+        connector_x += [row.payback_years, row.out_of_state_payback_years_est, None]
+        connector_y += [label, label, None]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=connector_x, y=connector_y, mode="lines",
+                              line=dict(color=GRID, width=2), showlegend=False, hoverinfo="skip"))
+    fig.add_trace(go.Scatter(
+        x=ordered["payback_years"], y=labels, mode="markers", name="In-state",
+        marker=dict(size=10, color=IN_STATE_COLOR),
+        hovertemplate="%{y}<br>In-state: %{x:.2f} years<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=ordered["out_of_state_payback_years_est"], y=labels, mode="markers", name="Out-of-state (est.)",
+        marker=dict(size=10, color=OUT_OF_STATE_COLOR),
+        hovertemplate="%{y}<br>Out-of-state est.: %{x:.2f} years<extra></extra>",
+    ))
+    layout = dict(LAYOUT_DEFAULTS)
+    layout["margin"] = dict(l=220, r=30, t=70, b=50)
+    fig.update_layout(
+        **layout,
+        title="Public institutions with the largest in-state vs. out-of-state payback gap",
+        xaxis=dict(title="Payback years", gridcolor=GRID),
+        yaxis=dict(gridcolor=GRID, automargin=True),
+        legend=dict(title="", orientation="h", yanchor="bottom", y=1.02),
+        height=460,
+    )
+    return fig
+
+
 def table_html(df, columns, headers, formatters) -> str:
     rows = []
     for _, row in df.iterrows():
@@ -95,7 +137,7 @@ def years(v) -> str:
     return f"{v:.2f}"
 
 
-def build_page(scatter_html, tier_html, best_table, worst_table, state_table) -> str:
+def build_page(scatter_html, tier_html, oos_stat_line, oos_html, best_table, worst_table, state_table) -> str:
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -134,6 +176,13 @@ def build_page(scatter_html, tier_html, best_table, worst_table, state_table) ->
   <h2>Payback years by cost tier</h2>
   {tier_html}
 
+  <h2>In-state vs. out-of-state (public institutions)</h2>
+  <p class="lede">College Scorecard's net-price figure for public institutions is in-state only; there's no
+     official out-of-state net price. The out-of-state figures here are estimated as in-state net price
+     plus the sticker-tuition gap between residencies, which assumes grant aid is the same regardless of
+     residency. Treat it as a reasonable approximation, not an official number. {oos_stat_line}</p>
+  {oos_html}
+
   <h2>Best and worst payback years</h2>
   <div class="two-col">
     <div>
@@ -163,11 +212,21 @@ def main() -> None:
     best, worst = top_bottom_rankings(df)
     tiers = cost_tier_summary(df)
     states = state_summary(df)
+    oos_gap = out_of_state_gap(df)
+    oos_stats = out_of_state_summary(df)
 
     scatter_html = build_scatter(df).to_html(full_html=False, include_plotlyjs="cdn",
                                               config={"displaylogo": False}, div_id="scatter-chart")
     tier_html = build_tier_bar(tiers).to_html(full_html=False, include_plotlyjs=False,
                                                config={"displaylogo": False}, div_id="tier-chart")
+    oos_html = build_oos_dumbbell(oos_gap).to_html(full_html=False, include_plotlyjs=False,
+                                                    config={"displaylogo": False}, div_id="oos-chart")
+    oos_pct_increase = (oos_stats["median_out_of_state"] / oos_stats["median_in_state"] - 1) * 100
+    oos_stat_line = (
+        f"Across all {oos_stats['institutions']:,} public institutions in this table, median payback years "
+        f"go from {oos_stats['median_in_state']:.2f} in-state to {oos_stats['median_out_of_state']:.2f} "
+        f"out-of-state estimate, a {oos_pct_increase:.0f}% increase."
+    )
 
     rank_formatters = {"institution": str, "state": str, "payback_years": years}
     best_table = table_html(best, ["institution", "state", "payback_years"],
@@ -184,7 +243,7 @@ def main() -> None:
                               state_formatters)
 
     OUT_HTML.parent.mkdir(parents=True, exist_ok=True)
-    OUT_HTML.write_text(build_page(scatter_html, tier_html, best_table, worst_table, state_table))
+    OUT_HTML.write_text(build_page(scatter_html, tier_html, oos_stat_line, oos_html, best_table, worst_table, state_table))
     print(f"Wrote {OUT_HTML.relative_to(ROOT)}")
 
 

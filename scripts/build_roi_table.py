@@ -17,6 +17,17 @@ debt-burden indicator. This is descriptive, not causal: it does not
 control for selection effects (who chooses/gets into which school), so
 it should be read as "what outcomes are associated with this school,"
 not "what this school causes for a given student."
+
+NPT4_PUB (net price for public institutions) is in-state only per the
+College Scorecard glossary; there's no official out-of-state net price.
+For public institutions, an out-of-state estimate is derived as
+net_price + (TUITIONFEE_OUT - TUITIONFEE_IN), the in-state net price
+plus the sticker-tuition gap between residencies. This assumes grant
+aid dollars are the same regardless of residency, which won't hold at
+every school (some use merit aid specifically to discount for
+out-of-state students), so treat it as an estimate, not an official
+figure. Private nonprofit tuition doesn't vary by residency, so their
+estimate equals their regular net price.
 """
 import pandas as pd
 from pathlib import Path
@@ -28,6 +39,7 @@ OUT_CSV = ROOT / "data" / "processed" / "college_scorecard_roi.csv"
 COLUMNS = [
     "UNITID", "INSTNM", "STABBR", "CONTROL", "PREDDEG",
     "COSTT4_A", "NPT4_PUB", "NPT4_PRIV", "UGDS",
+    "TUITIONFEE_IN", "TUITIONFEE_OUT",
     "C150_4", "MD_EARN_WNE_P10", "GRAD_DEBT_MDN",
 ]
 
@@ -35,7 +47,11 @@ CONTROL_LABELS = {1: "Public", 2: "Private nonprofit"}
 
 MIN_ENROLLMENT = 100
 
-NUMERIC_COLUMNS = ["COSTT4_A", "NPT4_PUB", "NPT4_PRIV", "UGDS", "C150_4", "MD_EARN_WNE_P10", "GRAD_DEBT_MDN"]
+NUMERIC_COLUMNS = [
+    "COSTT4_A", "NPT4_PUB", "NPT4_PRIV", "UGDS",
+    "TUITIONFEE_IN", "TUITIONFEE_OUT",
+    "C150_4", "MD_EARN_WNE_P10", "GRAD_DEBT_MDN",
+]
 
 
 def load_raw() -> pd.DataFrame:
@@ -52,19 +68,29 @@ def build_roi_table(df: pd.DataFrame) -> pd.DataFrame:
     df["net_price"] = df["NPT4_PUB"].fillna(df["NPT4_PRIV"])
     df["four_year_cost"] = df["net_price"] * 4
 
+    # Out-of-state estimate: only public institutions' net price is in-state-only,
+    # so only they get adjusted; private nonprofit tuition doesn't vary by residency.
+    df["out_of_state_net_price_est"] = df["net_price"]
+    is_public = df["CONTROL"] == 1
+    df.loc[is_public, "out_of_state_net_price_est"] = (
+        df.loc[is_public, "net_price"] + (df.loc[is_public, "TUITIONFEE_OUT"] - df.loc[is_public, "TUITIONFEE_IN"])
+    )
+    df["out_of_state_four_year_cost_est"] = df["out_of_state_net_price_est"] * 4
+
     df = df.dropna(subset=["four_year_cost", "MD_EARN_WNE_P10", "GRAD_DEBT_MDN", "UGDS"])
     df = df[(df["four_year_cost"] > 0) & (df["MD_EARN_WNE_P10"] > 0)]
     df = df[df["UGDS"] >= MIN_ENROLLMENT]
 
     df["control_label"] = df["CONTROL"].map(CONTROL_LABELS)
     df["payback_years"] = df["four_year_cost"] / df["MD_EARN_WNE_P10"]
+    df["out_of_state_payback_years_est"] = df["out_of_state_four_year_cost_est"] / df["MD_EARN_WNE_P10"]
     df["debt_to_earnings"] = df["GRAD_DEBT_MDN"] / df["MD_EARN_WNE_P10"]
 
     result = df[[
         "UNITID", "INSTNM", "STABBR", "control_label",
-        "net_price", "COSTT4_A", "four_year_cost", "UGDS", "C150_4",
+        "net_price", "out_of_state_net_price_est", "COSTT4_A", "four_year_cost", "UGDS", "C150_4",
         "MD_EARN_WNE_P10", "GRAD_DEBT_MDN",
-        "payback_years", "debt_to_earnings",
+        "payback_years", "out_of_state_payback_years_est", "debt_to_earnings",
     ]].rename(columns={
         "INSTNM": "institution",
         "STABBR": "state",
