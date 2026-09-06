@@ -27,6 +27,41 @@ Because public institutions' net price is in-state only, the payback years shown
 
 Full rankings, the cost-vs-earnings scatter, the in-state/out-of-state comparison, and a per-state breakdown are on [the live site](https://skofoed-1.github.io/college-scorecard-roi/).
 
+## SQL analysis
+
+The same processed table also lives in a SQLite database (`sql/college_scorecard_roi.db`), with the analytical queries in `sql/queries.sql`. This intentionally re-derives two results the pandas pipeline already produces, as a SQL-specific demonstration on the same data rather than a second copy of the real pipeline logic.
+
+Cost-tier medians via `NTILE(4)` for the quartile buckets and a window-function median (SQLite has no built-in `MEDIAN()`):
+
+```sql
+WITH tiered AS (
+    SELECT *, NTILE(4) OVER (ORDER BY net_price) AS cost_tier
+    FROM institutions
+),
+ordered AS (
+    SELECT
+        cost_tier, payback_years,
+        ROW_NUMBER() OVER (PARTITION BY cost_tier ORDER BY payback_years) AS rn,
+        COUNT(*) OVER (PARTITION BY cost_tier) AS cnt
+    FROM tiered
+)
+SELECT cost_tier, MAX(cnt) AS institutions, ROUND(AVG(payback_years), 2) AS median_payback_years
+FROM ordered
+WHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2)
+GROUP BY cost_tier
+ORDER BY cost_tier;
+```
+
+```
+cost_tier  institutions  median_payback_years
+1          379           0.93
+2          379           1.29
+3          379           1.66
+4          378           2.03
+```
+
+These medians match the pandas pipeline's cost-tier summary exactly, despite computing the quartiles and the median through entirely different mechanisms: a useful cross-check that both are correct. The second query, a `RANK() OVER (PARTITION BY state ...)` window function finding the best-value institution in each state, is in `sql/queries.sql` alongside this one.
+
 ## Data
 
 U.S. Dept. of Education [College Scorecard](https://collegescorecard.ed.gov/data/), institution-level bulk file. Free, no API key, no rate limit.
@@ -36,10 +71,11 @@ scripts/fetch_data.py       # downloads the current bulk CSV to data/raw/ (not c
 scripts/build_roi_table.py  # cleans it, applies the enrollment floor, computes payback_years / debt_to_earnings
 scripts/build_site_data.py  # computes rankings, state summary, and cost-tier summary
 scripts/build_site.py       # generates docs/index.html (the published site)
+scripts/build_sql.py        # loads the processed table into sql/college_scorecard_roi.db and runs sql/queries.sql
 data/processed/college_scorecard_roi.csv   # the resulting table, committed (small)
 ```
 
-To reproduce: `pip install -r requirements.txt`, then run the scripts in order. `docs/index.html` rebuilds automatically via GitHub Actions on any push that changes `scripts/**` or `data/processed/**`.
+To reproduce: `pip install -r requirements.txt`, then run the scripts in order. `docs/index.html` and `sql/college_scorecard_roi.db` rebuild automatically via GitHub Actions on any push that changes `scripts/**` or `data/processed/**`.
 
 ## Status
 
