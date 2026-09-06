@@ -2,12 +2,12 @@
 """Builds the cleaned ROI table from the raw College Scorecard institution
 CSV. Scope: public and private nonprofit, bachelor's-predominant
 institutions (PREDDEG == 3) with non-suppressed cost, earnings, and debt
-data — the population where "4-year cost vs. 10-year earnings" is a
+data: the population where "4-year cost vs. 10-year earnings" is a
 coherent, apples-to-apples comparison.
 
-ROI framing used here: a payback-period estimate — how many years of a
+ROI framing used here: a payback-period estimate (how many years of a
 graduate's post-graduation salary it would take to cover the total
-4-year cost of attendance — plus a debt-to-earnings ratio as a companion
+4-year cost of attendance) plus a debt-to-earnings ratio as a companion
 debt-burden indicator. This is descriptive, not causal: it does not
 control for selection effects (who chooses/gets into which school), so
 it should be read as "what outcomes are associated with this school,"
