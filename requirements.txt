@@ -1,2 +1,3 @@
 pandas
 plotly==7.0.0
+tableauhyperapi==0.0.26558

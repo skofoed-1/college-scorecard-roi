@@ -4,7 +4,9 @@ Handoff for building a supplementary Tableau Public workbook, linked from the ma
 
 Data source: `college_scorecard_tableau_extract.csv` in this folder, one row per institution, 1,515 rows. It's the exact processed table used by the live site, plus a `cost_tier` column already computed with the same quartile boundaries the site's chart uses (`pd.qcut` on `net_price` into 4 bins). Use that column directly rather than re-bucketing in Tableau, so the two presentations don't quietly disagree.
 
-Regenerate the extract any time `data/processed/college_scorecard_roi.csv` changes: `python scripts/build_site_data.py` then re-export `load_roi()`'s output (see how this file was generated in that script).
+A `.hyper` extract of the same data (Tableau's native format, faster to load than a raw CSV import) is available too, built via `python scripts/build_tableau_extract.py`. It's not committed to the repo since Hyper files embed a creation timestamp and are never byte-identical run to run, same reason `sql/college_scorecard_roi.db` isn't committed. Regenerate it locally, or use the CSV directly, whichever's easier from wherever you're running Tableau Desktop.
+
+Regenerate either any time `data/processed/college_scorecard_roi.csv` changes: `python scripts/build_site_data.py` then re-export `load_roi()`'s output for the CSV (see how this file was generated in that script), or `python scripts/build_tableau_extract.py` for the `.hyper` file.
 
 ## Palette
 
