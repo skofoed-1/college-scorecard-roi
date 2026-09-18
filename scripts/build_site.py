@@ -46,20 +46,20 @@ def build_scatter(df) -> go.Figure:
     for label in ["Public", "Private nonprofit"]:
         sub = df[df["control_label"] == label]
         fig.add_trace(go.Scatter(
-            x=sub["net_price"],
-            y=sub["median_earnings_10yr"],
+            x=sub["median_earnings_10yr"],
+            y=sub["net_price"],
             mode="markers",
             name=label,
             marker=dict(size=6, color=CONTROL_COLORS[label], opacity=0.65),
             customdata=sub[["institution", "state"]],
             hovertemplate="<b>%{customdata[0]}</b> (%{customdata[1]})<br>"
-                          "Net price: $%{x:,.0f}<br>Median earnings (10yr): $%{y:,.0f}<extra></extra>",
+                          "Median earnings (10yr): $%{x:,.0f}<br>Net price: $%{y:,.0f}<extra></extra>",
         ))
     fig.update_layout(
         **LAYOUT_DEFAULTS,
-        title="Net price vs. median earnings, 10 years after entry",
-        xaxis=dict(title="Average annual net price ($)", gridcolor=GRID, tickprefix="$"),
-        yaxis=dict(title="Median earnings, 10yr ($)", gridcolor=GRID, tickprefix="$"),
+        title="Median earnings vs. net price, 10 years after entry",
+        xaxis=dict(title="Median earnings, 10yr ($)", gridcolor=GRID, tickprefix="$"),
+        yaxis=dict(title="Average annual net price ($)", gridcolor=GRID, tickprefix="$"),
         legend=dict(title="Institution type"),
         height=520,
     )
