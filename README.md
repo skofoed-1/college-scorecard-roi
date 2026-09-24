@@ -1,6 +1,6 @@
 # College Scorecard ROI Explorer
 
-**[View the live site](https://skofoed-1.github.io/college-scorecard-roi/)**: rankings, charts, and a state-by-state breakdown.
+**[View the live site](https://skofoed-1.github.io/college-scorecard-roi/)**: rankings, charts, and a state-by-state breakdown. There's also a [supplementary Tableau Public workbook](https://public.tableau.com/app/profile/bob.marley4351/viz/CollegeScorecardROIExplorer/Dashboard1), personalized by state of residency; it's a secondary view, not a replacement, and reflects a manually-refreshed snapshot rather than the live site's automatic rebuilds.
 
 **Question:** For a bachelor's degree, how does the total cost of attendance compare to what graduates actually earn afterward, and does that relationship vary a lot by school?
 
